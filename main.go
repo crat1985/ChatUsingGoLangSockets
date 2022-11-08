@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net"
+	"strings"
 )
 
 type user struct {
@@ -11,7 +12,6 @@ type user struct {
 }
 
 var users []user
-var pseudoString string
 
 func main() {
 	server, err := net.Listen("tcp", ":8888")
@@ -29,8 +29,10 @@ func main() {
 }
 
 func processClient(conn net.Conn) {
+	var pseudoOk bool
+	var pseudoInfos string
 	for {
-		pseudoOk, pseudoInfos := verifyPseudo(conn)
+		pseudoOk, pseudoInfos = verifyPseudo(conn)
 		if !pseudoOk {
 			conn.Write([]byte(pseudoInfos))
 			continue
@@ -41,7 +43,7 @@ func processClient(conn net.Conn) {
 		}
 		break
 	}
-	userTemp := user{socket: conn, pseudo: pseudoString}
+	userTemp := user{socket: conn, pseudo: pseudoInfos}
 	users = append(users, userTemp)
 	go listenForMsg(userTemp)
 }
@@ -52,11 +54,21 @@ func verifyPseudo(conn net.Conn) (bool, string) {
 	if err != nil {
 		return false, "Erreur lors de la lecture du pseudo !"
 	}
-	pseudoString = string(pseudoSlice[:n])
+	pseudoString := string(pseudoSlice[:n])
 	if len(pseudoString) < 5 {
 		return false, "Pseudo trop court : le pseudo doit au moins contenir 5 caractères !"
 	}
-	return true, ""
+	var found bool
+	for _, value := range users {
+		if strings.ToLower(value.pseudo) == strings.ToLower(pseudoString) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return true, pseudoString
+	}
+	return false, "Quelqu'un avec le même pseudo est déjà connecté"
 }
 
 func listenForMsg(u user) {

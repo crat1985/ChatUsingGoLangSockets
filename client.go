@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 )
 
@@ -41,7 +43,16 @@ func main() {
 
 func sendMessages(conn net.Conn) {
 	fmt.Print(message)
-	fmt.Scan(&input)
+	reader := bufio.NewReader(os.Stdin)
+	line, isPrefix, err := reader.ReadLine()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if isPrefix {
+		fmt.Println("Message to long !")
+	}
+	input = string(line)
 	if input == ":quit" {
 		quit = true
 		conn.Close()
